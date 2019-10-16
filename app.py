@@ -8,6 +8,9 @@ if __name__ == "__main__":
     assert(len(sys.argv) > 0)
     role = sys.argv[1]
     host = sys.argv[2]
+    crypt = int(sys.argv[3])
+    if(crypt):
+        print('use crypt')
     assert(role in ['local', 'remote', 'test'])
 
     LLaddr = {'HOST': '127.0.0.1', 'PORT': 1080}
@@ -25,10 +28,11 @@ if __name__ == "__main__":
             #     lambda data: pubKey
             # ])
             ll.setMiddle(l)
-            ll.setPipeCallback(
-                near={'data':lambda data: encrypt(data,aesKey)},
-                far={'data':lambda data: decrypt(data, aesKey)}
-            )
+            if(crypt):
+                ll.setPipeCallback(
+                    near={'data':lambda data: encrypt(data,aesKey)},
+                    far={'data':lambda data: decrypt(data, aesKey)}
+                )
             ll.start()
             netHandle.add([ll,l])
 
@@ -44,10 +48,11 @@ if __name__ == "__main__":
             # r.setPreConnect([
             #     lambda data: netKey['pub']
             # ])
-            r.setPipeCallback(
-                near={'data':lambda data: decrypt(data,aesKey)},
-                far={'data':lambda data: encrypt(data, aesKey)}
-            )
+            if(crypt):
+                r.setPipeCallback(
+                    near={'data':lambda data: decrypt(data,aesKey)},
+                    far={'data':lambda data: encrypt(data, aesKey)}
+                )
             r.start()
 
             netHandle.add([r,rr])
