@@ -8,6 +8,7 @@ def encrypt(data, password):
         data = base64.encodebytes(data.encode('utf8')).decode('utf8')
     elif isinstance(data, bytes):
         data = base64.encodebytes(data).decode('utf8')
+    # print('\nencrypt input: ', data)
     bs = AES.block_size
     pad = lambda s: s + (bs - len(s) % bs) * chr(bs - len(s) % bs)
     iv = Random.new().read(bs)
@@ -16,13 +17,15 @@ def encrypt(data, password):
     # print('\nencrypt input: {} \n'.format(data))
     data = cipher.encrypt(data)
     data = iv + data
-    data = base64.b64encode(data)
+    # data = base64.b64encode(data)
+    data = base64.encodebytes(data)
     # print('\nencrypt output: {} \n'.format(data))
     return data
  
 def decrypt(data, password):
-    # print('\ndecrpy input: {} \n'.format(data))
-    data = base64.b64decode(data)
+    print('\ndecrpy input: {} \n'.format(data))
+    # data = base64.b64decode(data)
+    data = base64.decodebytes(data)
     bs = AES.block_size
     if len(data) <= bs:
         return data
