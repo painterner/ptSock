@@ -2,6 +2,8 @@ import socket
 import threading
 import time
 import signal
+from http.server import BaseHTTPRequestHandler
+from io import BytesIO
 
 ##      llocal - local ==== remote - rrmote
 ##      ll   -   l   ====   r   -   rr
@@ -23,9 +25,6 @@ these arguments selects the full range of results.
 """
 
 BUFFER_SIZE = 64*1024
-
-from http.server import BaseHTTPRequestHandler
-from io import BytesIO
 
 class HTTPRequest(BaseHTTPRequestHandler):
     def __init__(self, request_text):
@@ -72,6 +71,11 @@ class sHandle(threading.Thread):
         self.sock = socket.socket(type=socket.SOCK_STREAM)
         self.runFlag = True
         self.keep_alive = True
+        self.preList = []
+        self.pipeCallBack={
+            "near": {'data': lambda data: data, 'state':True,'msg': None},
+            "far": {'data': lambda data: data, 'state':True,'msg': None}
+        }
     def getSock(self):
         return self.sock
     def shutdown(self):
@@ -93,6 +97,20 @@ class sHandle(threading.Thread):
         self.keep_alive = boolv
     def keepAlive(self):
         return self.keep_alive
+    def setPreConnect(self, lst):
+        assert isinstance(lst, (list, tuple))
+        self.preList=lst
+    def preConnect(self,data):
+        if len(self.preList) == 0:
+            return [data,False]
+        func = self.preList.pop(0)
+        data = func(data)
+        return [data, True]
+    def setPipeCallback(self,near=None,far=None):
+        if near is not None:
+            self.pipeCallBack['near'].update(near)
+        if far is not None:
+            self.pipeCallBack['far'].update(far)
         
     def run(self):       
         # with self.sock as s:
@@ -114,15 +132,28 @@ class sHandle(threading.Thread):
                     print(addr,self.frameCount)
                     # data = conn.recv(self.dataLen,socket.MSG_WAITALL)
                     data = conn.recv(self.dataLen)
-                    if not data: break
-
-                    if(self.middle is not None):
-                        if (self.middle.waitAddr):
-                            self.setMiddleAddr(*parse(data)['addr'])
-                        print(data)
-                        data = self.middle.sendall( data )
+                    data, preFlag = self.preConnect(data)
+                    # print('data', data)
+                    if(not preFlag):
+                        
                         if not data: break
-
+                        transData = self.pipeCallBack['near']
+                        data = transData['data'](data)
+                        if(not transData['state']):
+                            data = transData['msg']
+                        else:
+                            if(self.middle is not None):
+                                if (self.middle.waitAddr):
+                                    self.setMiddleAddr(*parse(data)['addr'])
+                                print(data)
+                                data = self.middle.send_and_echo( data )
+                                if not data: break
+                        # print('\n back \n')
+                        transData = self.pipeCallBack['far']
+                        data = transData['data'](data)
+                        if(not transData['state']):
+                            data = transData['msg']
+                    # print('data', data)
                     conn.sendall(data)
                     if(not self.keepAlive()):
                         conn.close()
@@ -162,10 +193,10 @@ class cHandle(threading.Thread):
     def sendall(self, data):
         print('cHandle sendall', data)
         self.sock.sendall(data)
-        data = self.sock.recv(self.dataLen)
-        return data
     def sockSend(self, data):
         self.sock.sendall(data)
+    def send_and_echo(self, data):
+        self.sendall(data)
         data = self.sock.recv(self.dataLen)
         return data
     def connect(self):
@@ -198,7 +229,7 @@ def rrmote():
     c = cHandle(dataLen=BUFFER_SIZE)
     def sendall(data):
         r = parse(data)
-        return c.sockSend(r['data'])
+        c.sockSend(r['data'])
     c.sendall = sendall
     return c
 
@@ -207,27 +238,35 @@ def mockApi(addr):
     th.start()
     return th
 
-def signalHandle(models):
-    def impl(signum, frame):
-        if(signum == signal.SIGINT):
-            print('shutdown all socks')
-            for s in models:
-                s.shutdown()
-            for s in models:
-                try:
-                    s.join()
-                    print('joined')
-                except:
-                    ## 如果是早就退出了的话当然会unjoin(资源都没了怎么join)
-                    print('unjoined')
-                    continue
-            exit(signum)
-    signal.signal(signal.SIGINT, impl)
+class sigHandle:
+    def __init__(self):
+        self.models = []
+        self.net_signalHandle()
+    def add(self, models):
+        for m in models:
+            if m not in self.models:
+                self.models.append(m)
+    def net_signalHandle(self):
+        def impl(signum, frame):
+            if(signum == signal.SIGINT):
+                print('shutdown all socks')
+                for s in self.models:
+                    s.shutdown()
+                for s in self.models:
+                    try:
+                        s.join()
+                        print('joined')
+                    except:
+                        ## 如果是早就退出了的话当然会unjoin(资源都没了怎么join)
+                        print('unjoined')
+                        continue
+                exit(signum)
+        signal.signal(signal.SIGINT, impl)
 
 if __name__ == "__main__":
     LLaddr = {'HOST': '127.0.0.1', 'PORT': 1080}
-    Raddr = {'HOST': '127.0.0.1', 'PORT': 9002}
-    APIaddr = {'HOST': '127.0.0.1', 'PORT': 9004}
+    Raddr = {'HOST': '127.0.0.1', 'PORT': 8390}
+    APIaddr = {'HOST': '127.0.0.1', 'PORT': 8391}
 
     api = mockApi(APIaddr)
 
@@ -241,5 +280,5 @@ if __name__ == "__main__":
     ll.setMiddle(l)
     ll.start()
 
-    signalHandle([l, ll, r, rr, api])
+    sigHandle().add([l, ll, r, rr, api])
     
