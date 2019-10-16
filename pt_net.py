@@ -47,10 +47,12 @@ def parse(data):
     if(len(sr) > 1):
         addr = (sr[0], int(sr[1]))
     else:
-        addr = socket.getaddrinfo(data.headers['host'], 'http', 0, 0, 0, 0)[0][4]
+        # addr = socket.getaddrinfo(data.headers['host'], 'http', 0, 0, 0, 0)[0][4]
+        addr = socket.getaddrinfo(data.headers['host'], 'http', socket.AF_INET, socket.SOCK_STREAM, 0, 0)[0][4]
     if('http'):
         returnData = bytesData
     
+    print('addr:', addr)
 
     return {
         'addr': addr, 
@@ -76,6 +78,7 @@ class sHandle(threading.Thread):
             "near": {'data': lambda data: data, 'state':True,'msg': None},
             "far": {'data': lambda data: data, 'state':True,'msg': None}
         }
+        self.internet = False
     def getSock(self):
         return self.sock
     def shutdown(self):
@@ -143,7 +146,7 @@ class sHandle(threading.Thread):
                             data = transData['msg']
                         else:
                             if(self.middle is not None):
-                                if (self.middle.waitAddr):
+                                if (self.middle.waitAddr or self.internet):
                                     self.setMiddleAddr(*parse(data)['addr'])
                                 print(data)
                                 data = self.middle.send_and_echo( data )
@@ -171,7 +174,8 @@ class cHandle(threading.Thread):
         self.dataLen = dataLen
         self.runFlag = True
 
-        self.sock = socket.socket()
+        # self.sock = socket.socket()
+        self.sock = None
         self.setAddr(HOST,PORT)
         
     def getSock(self):
@@ -188,8 +192,9 @@ class cHandle(threading.Thread):
         self.PORT = PORT
         if(self.HOST is not None and self.PORT is not None):
             self.waitAddr = False
+            self.close()
             self.connect()
-            self.start()
+            # self.start()
     def sendall(self, data):
         print('cHandle sendall', data)
         self.sock.sendall(data)
@@ -199,7 +204,11 @@ class cHandle(threading.Thread):
         self.sendall(data)
         data = self.sock.recv(self.dataLen)
         return data
+    def close(self):
+        if self.sock:
+            self.sock.close()
     def connect(self):
+        self.sock = socket.socket()
         self.sock.connect((self.HOST, self.PORT))
     def run(self):
         while True:
@@ -223,6 +232,7 @@ def local(R):
 
 def remote(R):
     th = sHandle(R['HOST'] ,R['PORT'],BUFFER_SIZE)
+    th.internet = True
     return th
 
 def rrmote():
