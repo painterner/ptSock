@@ -19,14 +19,17 @@ def encrypt(data, password):
     data = cipher.encrypt(data)
     data = iv + data
     # data = base64.b64encode(data)
-    data = base64.encodebytes(data)
+    data = base64.urlsafe_b64encode(data)
+    # data = base64.encodebytes(data)
     # print('\nencrypt output: {} \n'.format(data))
     return data
 
 def decrypt(data, password):
     print('\ndecrpy input: {} \n'.format(data))
     # data = base64.b64decode(data)
-    data = base64.decodebytes(data)
+    # data = data.decode('utf8')
+    data = base64.urlsafe_b64decode(data)
+    # data = base64.decodebytes(data)
     bs = AES.block_size
     if len(data) <= bs:
         raise Exception('data is impossible for less than', bs)
