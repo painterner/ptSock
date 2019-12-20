@@ -19,7 +19,9 @@ def encrypt(data, password):
     data = cipher.encrypt(data)
     data = iv + data
     # data = base64.b64encode(data)
+    print('size0', len(data))
     data = base64.urlsafe_b64encode(data)
+    print('size1', len(data))
     # data = base64.encodebytes(data)
     # print('\nencrypt output: {} \n'.format(data))
     return data
@@ -28,7 +30,9 @@ def decrypt(data, password):
     print('\ndecrpy input: {} \n'.format(data))
     # data = base64.b64decode(data)
     # data = data.decode('utf8')
+    print('size2', len(data))
     data = base64.urlsafe_b64decode(data)
+    print('size3', len(data))
     # data = base64.decodebytes(data)
     bs = AES.block_size
     if len(data) <= bs:
