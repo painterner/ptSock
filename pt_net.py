@@ -82,6 +82,7 @@ class sHandle(threading.Thread):
         self.internet = False
         self.mode = mode ## 'pipe', 'echo'
         self.debug = debug
+        self.flag_sendLengthInd = False
     def getSock(self):
         return self.sock
     def shutdown(self):
@@ -161,6 +162,8 @@ class sHandle(threading.Thread):
                         if(not transData['state']):
                             data = transData['msg']
                     # print('data', data)
+                    if self.flag_sendLengthInd:
+                        data = len(data).to_bytes(8, 'little') + data
                     conn.sendall(data)
                     if(not self.keepAlive()):
                         conn.close()
@@ -177,6 +180,7 @@ class cHandle(threading.Thread):
         self.waitAddr = True
         self.dataLen = dataLen
         self.runFlag = True
+        self.flag_recvLoop = False
 
         # self.sock = socket.socket()
         self.sock = None
@@ -204,9 +208,27 @@ class cHandle(threading.Thread):
         self.sock.sendall(data)
     def sockSend(self, data):
         self.sock.sendall(data)
+    def recvLoop(self):
+        dl = self.sock.recv(8)
+        print('recv loop dl0', dl)
+        dl = int.from_bytes(dl, 'little')
+        print('recv loop dl1', dl)
+        E = b''
+        i = 0
+        while dl > 0:
+            d = self.sock.recv(dl)     
+            dl = dl-len(d)
+            E += d
+            print('recv loop',i,len(d),len(E))
+            i = i+1
+        return E
+        
     def send_and_echo(self, data):
         self.sendall(data)
-        data = self.sock.recv(self.dataLen)
+        if self.flag_recvLoop:  ## 接受数据的某些位置定义需要接受的大小，以便兼容大数据接受。
+            data = self.recvLoop()
+        else:
+            data = self.sock.recv(self.dataLen)
         return data
     def close(self):
         if self.sock:
@@ -232,11 +254,13 @@ def llocal(LL):
 
 def local(R):
     c = cHandle(R['HOST'] ,R['PORT'], dataLen=BUFFER_SIZE)
+    c.flag_recvLoop = True
     return c
 
 def remote(R):
     th = sHandle(R['HOST'] ,R['PORT'],BUFFER_SIZE)
     th.internet = True
+    th.flag_sendLengthInd = True
     return th
 
 def rrmote():
