@@ -70,7 +70,12 @@ if __name__ == '__main__':
     # 远程部署时测试curl www.163.com 时返回加密后data为这个，解密失败(异常: Input strings must be a multiple of 16 in length), 本地测试却是正常的 ?
     print(len(data))
 
-    # decrypt_data = decrypt(encrypt_data, password)
-    decrypt_data = decrypt(data, password)
+    decrypt_data = decrypt(encrypt_data, password)
+    # decrypt_data = decrypt(data, password)
     decrypt_data = decrypt_data.decode('utf8')
     print('decrypt_data:', decrypt_data)
+
+
+## log:
+## 1. 远程部署时测试curl www.163.com 时返回加密后data为这个，解密失败(异常: Input strings must be a multiple of 1 ...
+## ==> 原因找到了，sock.recv(len)的时候会存在小与len也返回的情况，这时需要进行recvLoop直到接受完预料的长度即可。
