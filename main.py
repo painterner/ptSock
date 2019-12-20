@@ -2,7 +2,7 @@ from pt_net import sigHandle, remote,rrmote,local,llocal,mockApi
 from pt_crypto import Crypto
 from pt_aes import decrypt, encrypt, getKey
 import sys,os
-import OpenSSL
+# import OpenSSL
 
 
 if __name__ == "__main__":
