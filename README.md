@@ -10,6 +10,9 @@ ref: https://www.cnblogs.com/idreamo/p/9411265.html
 
 大数存储以及运算. 好像有点麻烦, 先用python库来处理吧.
 
+### pyelliptic
+测试失败，可能创作者本身就没有完成。 不过其中有__HMAC__可以让我回忆一下HUMAN PLUS的工作。
+
 
 #os 
 ## centos
@@ -29,3 +32,10 @@ https://www.linuxidc.com/Linux/2019-06/159104.htm
 查询有哪些端口是开启的:
 
 [root@centos7 ~]# firewall-cmd --list-port
+
+
+## python2to3
+ref: https://stackoverflow.com/questions/28896749/in-python-3-x-make-print-work-like-in-python-2-as-statement
+keyword: builtins.__import__
+         lib2to3
+conclusions: still unsafe

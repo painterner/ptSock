@@ -4,6 +4,7 @@ import time
 import signal
 from http.server import BaseHTTPRequestHandler
 from io import BytesIO
+from shadowsocks import asyncdns, eventloop
 
 ##      llocal - local ==== remote - rrmote
 ##      ll   -   l   ====   r   -   rr
@@ -62,7 +63,7 @@ def parse(data):
 #     return addr + '-' + data
 
 class sHandle(threading.Thread):
-    def __init__(self,HOST,PORT,dataLen, role=None):
+    def __init__(self,HOST,PORT,dataLen, role=None, mode='pipe', debug=False):
         threading.Thread.__init__(self)
         self.HOST = HOST
         self.PORT = PORT
@@ -79,6 +80,8 @@ class sHandle(threading.Thread):
             "far": {'data': lambda data: data, 'state':True,'msg': None}
         }
         self.internet = False
+        self.mode = mode ## 'pipe', 'echo'
+        self.debug = debug
     def getSock(self):
         return self.sock
     def shutdown(self):
@@ -136,10 +139,11 @@ class sHandle(threading.Thread):
                     # data = conn.recv(self.dataLen,socket.MSG_WAITALL)
                     data = conn.recv(self.dataLen)
                     data, preFlag = self.preConnect(data)
-                    # print('data', data)
-                    if(not preFlag):
+                    if self.debug: print('recv', data)
+                    if not data: break
+                    if(not preFlag and self.mode !='echo'):
                         
-                        if not data: break
+                        #if not data: break
                         transData = self.pipeCallBack['near']
                         data = transData['data'](data)
                         if(not transData['state']):
@@ -244,7 +248,7 @@ def rrmote():
     return c
 
 def mockApi(addr):
-    th = sHandle(addr['HOST'], addr['PORT'], BUFFER_SIZE)
+    th = sHandle(addr['HOST'], addr['PORT'], BUFFER_SIZE, mode='echo', debug=True)
     th.start()
     return th
 
@@ -274,11 +278,12 @@ class sigHandle:
         signal.signal(signal.SIGINT, impl)
 
 if __name__ == "__main__":
-    LLaddr = {'HOST': '127.0.0.1', 'PORT': 1080}
+    LLaddr = {'HOST': '127.0.0.1', 'PORT': 1081}
     Raddr = {'HOST': '127.0.0.1', 'PORT': 8390}
     APIaddr = {'HOST': '127.0.0.1', 'PORT': 8391}
 
     api = mockApi(APIaddr)
+    print('mockapi address', APIaddr)
 
     r = remote(Raddr)
     rr = rrmote()

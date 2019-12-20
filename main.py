@@ -2,6 +2,7 @@ from pt_net import sigHandle, remote,rrmote,local,llocal,mockApi
 from pt_crypto import Crypto
 from pt_aes import decrypt, encrypt, getKey
 import sys,os
+import OpenSSL
 
 
 if __name__ == "__main__":
@@ -13,7 +14,7 @@ if __name__ == "__main__":
         print('use crypt')
     assert(role in ['local', 'remote', 'test'])
 
-    LLaddr = {'HOST': '127.0.0.1', 'PORT': 1080}
+    LLaddr = {'HOST': '127.0.0.1', 'PORT': 1081}
     Raddr = {'HOST': host, 'PORT': 8390}
     APIaddr = {'HOST': '127.0.0.1', 'PORT': 8391}
 
